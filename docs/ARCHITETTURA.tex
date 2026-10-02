@@ -1,0 +1,565 @@
+% Esper - Guida all'architettura e agli strumenti
+% Compilazione: latexmk -pdf ARCHITETTURA.tex   (oppure pdflatex due volte)
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[italian]{babel}
+\usepackage[a4paper,margin=2.5cm,top=2.8cm,bottom=2.6cm]{geometry}
+\usepackage{microtype}
+\usepackage[table]{xcolor}
+\usepackage{booktabs,tabularx,array}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{listings}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,fit,backgrounds}
+\usepackage[most]{tcolorbox}
+\usepackage{amsmath}
+\usepackage[hidelinks,pdftitle={Esper - Guida all'architettura},pdfauthor={Esper}]{hyperref}
+
+% ---------- Palette (ispirata al tema dell'app) ----------
+\definecolor{amber}{HTML}{B45F06}
+\definecolor{ink}{HTML}{1C2128}
+\definecolor{dim}{HTML}{566170}
+\definecolor{teal}{HTML}{0E7C86}
+\definecolor{paper}{HTML}{F6F3EC}
+\definecolor{rule}{HTML}{D8D1C2}
+\definecolor{codebg}{HTML}{F1EEE6}
+
+\color{ink}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.55em}
+\linespread{1.08}
+\setlist{itemsep=0.2em,topsep=0.3em,parsep=0pt}
+\renewcommand{\arraystretch}{1.3}
+
+% ---------- Titoli ----------
+\titleformat{\section}{\Large\bfseries\color{ink}}{\color{amber}\thesection}{0.7em}{}[{\color{rule}\titlerule[0.8pt]}]
+\titleformat{\subsection}{\large\bfseries\color{ink}}{\color{amber}\thesubsection}{0.6em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries\color{teal}}{}{0em}{}
+\titlespacing*{\section}{0pt}{2.2em}{0.9em}
+\titlespacing*{\subsection}{0pt}{1.5em}{0.5em}
+
+% ---------- Intestazione e piè di pagina ----------
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\headrule}{\hbox to\headwidth{\color{rule}\leaders\hrule height \headrulewidth\hfill}}
+\fancyhead[L]{\small\color{dim}\textsc{Esper}}
+\fancyhead[R]{\small\color{dim}Guida all'architettura}
+\fancyfoot[C]{\small\color{dim}\thepage}
+\fancypagestyle{plain}{\fancyhf{}\fancyfoot[C]{\small\color{dim}\thepage}\renewcommand{\headrulewidth}{0pt}}
+
+% ---------- Codice ----------
+\lstset{
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{codebg},
+  frame=single, rulecolor=\color{rule},
+  framesep=6pt, xleftmargin=6pt, xrightmargin=6pt,
+  breaklines=true, columns=fullflexible, keepspaces=true,
+  keywordstyle=\color{teal}\bfseries, commentstyle=\color{dim}\itshape,
+  showstringspaces=false, aboveskip=0.8em, belowskip=0.6em,
+}
+\lstdefinelanguage{SQLe}{
+  morekeywords={CREATE,TABLE,INTEGER,PRIMARY,KEY,TEXT,UNIQUE},
+  morecomment=[l]{--}, sensitive=false,
+}
+\newcommand{\code}[1]{\texttt{\small #1}}
+
+% ---------- Riquadri ----------
+\newtcolorbox{nota}[1][Nota]{
+  breakable, enhanced, colback=amber!6, colframe=amber!70, boxrule=0pt,
+  leftrule=3pt, arc=2pt, left=10pt, right=8pt, top=6pt, bottom=6pt,
+  title={#1}, coltitle=amber, fonttitle=\bfseries\small, attach boxed title to top left={yshift=-1mm,xshift=-3mm},
+  boxed title style={colback=white,colframe=white,boxrule=0pt,top=0pt,bottom=0pt},
+  before skip=0.8em, after skip=0.8em,
+}
+\newtcolorbox{idea}[1][In breve]{
+  breakable, enhanced, colback=teal!6, colframe=teal!70, boxrule=0pt,
+  leftrule=3pt, arc=2pt, left=10pt, right=8pt, top=6pt, bottom=6pt,
+  title={#1}, coltitle=teal, fonttitle=\bfseries\small, attach boxed title to top left={yshift=-1mm,xshift=-3mm},
+  boxed title style={colback=white,colframe=white,boxrule=0pt,top=0pt,bottom=0pt},
+  before skip=0.8em, after skip=0.8em,
+}
+
+% ---------- Tabelle ----------
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcommand{\hd}[1]{\textbf{\color{amber}#1}}
+\newcommand{\tablehead}{\rowcolor{paper}}
+
+% ---------- Stili TikZ ----------
+\tikzset{
+  node/.style={draw=rule,fill=paper,rounded corners=3pt,align=center,inner sep=6pt,text width=3.6cm,font=\small},
+  accent/.style={node,draw=amber,fill=amber!8},
+  cool/.style={node,draw=teal,fill=teal!8},
+  store/.style={node,draw=dim,fill=white,rounded corners=1pt},
+  flow/.style={-{Stealth[length=2.2mm]},thick,color=dim},
+  small/.style={font=\footnotesize\color{dim}},
+}
+
+\begin{document}
+
+% =========================== COPERTINA ===========================
+\begin{titlepage}
+\thispagestyle{empty}
+\begin{tikzpicture}[remember picture,overlay]
+  \fill[paper] (current page.south west) rectangle (current page.north east);
+  \fill[amber] ([xshift=2.5cm]current page.north west) rectangle ++(0.45cm,-29.7cm);
+  % mirino stilizzato
+  \begin{scope}[shift={([xshift=-4.6cm,yshift=-6.4cm]current page.north east)}]
+    \draw[amber,line width=1.4pt] (0,0) circle (1.9);
+    \draw[teal,line width=1pt,opacity=.8] (0,0) circle (1.0);
+    \fill[amber] (0,0) circle (0.28);
+    \foreach \a in {0,90,180,270}{\draw[amber,line width=1.4pt] (\a:1.9) -- (\a:2.5);}
+  \end{scope}
+\end{tikzpicture}
+\vspace*{9.5cm}
+\hspace{1.2cm}\begin{minipage}{0.75\textwidth}
+  {\Huge\bfseries\color{ink}Esper}\\[0.6em]
+  {\Large\color{amber}Archivio personale con ricerca semantica}\\[2.2em]
+  {\large\color{dim}Guida all'architettura e agli strumenti}\\[0.4em]
+  {\color{dim}Concetti, flussi di lavoro e componenti software}
+\end{minipage}
+\vfill
+\hspace{1.2cm}{\small\color{dim}Documento di riferimento del progetto \quad|\quad stato: fase di progettazione}
+\end{titlepage}
+
+\setcounter{tocdepth}{1}\tableofcontents
+\newpage
+
+% =========================== 1 ===========================
+\section{Visione d'insieme}
+
+Esper è un archivio personale di documenti con \textbf{ricerca semantica}: si descrive a parole ciò che si cerca e l'app trova i file pertinenti, anche se non contengono quelle parole esatte. Questo documento spiega i concetti e ogni strumento usato, così da capire che cosa succede sotto il cofano.
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=8mm and 14mm]
+  \node[cool] (ui) {\textbf{Interfaccia web}\\[-1pt]\footnotesize Svelte, poi dentro Tauri};
+  \node[accent,below=9mm of ui] (api) {\textbf{Backend Python}\\[-1pt]\footnotesize FastAPI};
+  \node[node,below left=9mm and 0mm of api,xshift=-1.6cm] (queue) {\textbf{Coda di lavori}\\[-1pt]\footnotesize elaborazione in background};
+  \node[node,below right=9mm and 0mm of api,xshift=1.6cm] (model) {\textbf{Modelli di embedding}\\[-1pt]\footnotesize PyTorch, su CPU};
+  \node[store,below=of queue] (files) {\textbf{Cartella dei file}\\[-1pt]\footnotesize originali, nome = hash};
+  \node[store,below=of model] (db) {\textbf{SQLite}\\[-1pt]\footnotesize metadati, testo, FTS5, vettori};
+  \draw[flow,<->] (ui) -- node[right,small]{HTTP su localhost} (api);
+  \draw[flow] (api) -- (queue);
+  \draw[flow] (api) -- (model);
+  \draw[flow] (queue) -- (model);
+  \draw[flow] (queue) -- (files);
+  \draw[flow] (model) -- (db);
+  \draw[flow,<->] (api.east) -- ([xshift=9mm]model.east |- api.east) |- (db.east);
+\end{tikzpicture}
+\caption{Architettura a livelli di Esper.}
+\end{figure}
+
+Tre idee reggono tutto:
+\begin{enumerate}
+  \item \textbf{I file originali stanno su disco}, non nel database. Il database contiene solo informazioni \emph{sui} file.
+  \item \textbf{Ogni file viene trasformato in testo} (o in un'immagine da analizzare), spezzato in pezzi, e \textbf{ogni pezzo diventa un vettore} (embedding).
+  \item \textbf{La ricerca confronta vettori} e li combina con la classica ricerca per parole chiave e con le etichette.
+\end{enumerate}
+
+% =========================== 2 ===========================
+\section{Concetti fondamentali}
+
+\subsection{Che cos'è un embedding}
+
+Un embedding è una \textbf{lista di numeri} (un vettore, per esempio di 1024 elementi) che rappresenta il \emph{significato} di un testo. Viene prodotto da una rete neurale addestrata con un obiettivo preciso: \textbf{testi con significato simile devono ricevere vettori vicini}, testi diversi vettori lontani.
+
+Esempio concreto (le dimensioni reali sono molte di più):
+
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{@{}L{5.3cm}>{\ttfamily}X l@{}}
+\toprule
+\tablehead \hd{Testo} & \hd{Vettore} & \hd{Rispetto al primo} \\
+\midrule
+il gatto dorme sul divano & [\,0.21, -0.40, 0.77, \dots\,] & --- \\
+un felino riposa sul sofà & [\,0.19, -0.38, 0.74, \dots\,] & \textcolor{teal}{vicino} \\
+fattura n.\ 4521 del 3 marzo & [-0.62, 0.15, -0.20, \dots\,] & \textcolor{amber}{lontano} \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Le prime due frasi non condividono quasi nessuna parola, ma i loro vettori sono vicini. Una ricerca per parole chiave non le collegherebbe mai; la ricerca semantica sì.
+
+\begin{nota}[Attenzione]
+Non bisogna immaginare che ogni numero abbia un significato leggibile (``la terza dimensione è la felinità''). Il significato sta nella \textbf{posizione relativa} dei vettori nello spazio.
+\end{nota}
+
+\subsection{Come si misura la ``vicinanza''}
+
+Si usa la \textbf{similarità del coseno}, cioè l'angolo tra due vettori $\mathbf{a}$ e $\mathbf{b}$:
+\[
+  \cos(\mathbf{a},\mathbf{b}) \;=\; \frac{\mathbf{a}\cdot\mathbf{b}}{\lVert\mathbf{a}\rVert\,\lVert\mathbf{b}\rVert}
+\]
+\begin{itemize}
+  \item coseno $\approx 1$: stessa direzione, significato molto simile;
+  \item coseno $\approx 0$: ortogonali, non correlati;
+  \item coseno $< 0$: opposti (raro nei modelli di testo).
+\end{itemize}
+Se i vettori sono normalizzati (lunghezza 1), il coseno coincide con il \textbf{prodotto scalare}, molto veloce da calcolare. La maggior parte dei modelli moderni produce già vettori normalizzati.
+
+\subsection{Come nasce un modello di embedding}
+
+\begin{enumerate}
+  \item Si parte da un \textbf{Transformer} (la stessa famiglia degli LLM, in versione ``encoder''): legge tutto il testo in una volta e, grazie al meccanismo di \emph{attention}, ogni parola viene rappresentata tenendo conto di quelle attorno.
+  \item Il testo viene prima spezzato in \textbf{token} (pezzi di parola) da un \emph{tokenizer}.
+  \item L'encoder produce un vettore per ogni token; un passaggio di \emph{pooling} (media, oppure il token speciale \code{[CLS]}) li riduce a \textbf{un solo vettore per l'intero testo}.
+  \item L'addestramento è \textbf{contrastivo}: si danno al modello coppie di testi che vanno insieme (domanda e risposta pertinente, titolo e articolo, frase e traduzione) e coppie che non c'entrano. La funzione di perdita spinge i primi vettori ad avvicinarsi e i secondi ad allontanarsi.
+\end{enumerate}
+
+Tu \textbf{non} farai questa parte: userai modelli già addestrati, scaricati una volta e usati in locale.
+
+\subsection{Perché non basta un embedding per documento}
+
+Un modello ha una \textbf{finestra massima} di token e, soprattutto, comprime tutto in un vettore di dimensione fissa. Un documento di 50 pagine ridotto a un solo vettore diventa una ``media sfocata'' di tutti gli argomenti, e una ricerca specifica non lo troverebbe.
+
+Per questo si fa \textbf{chunking}: il documento viene diviso in pezzi (circa 300--500 token, con un po' di sovrapposizione fra pezzi adiacenti) e \textbf{ogni chunk ha il suo embedding}. In ricerca si trovano i chunk migliori e poi si risale al documento a cui appartengono.
+
+\subsection{Ricerca semantica e ricerca per parole chiave}
+
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{@{}L{2.2cm}XX@{}}
+\toprule
+\tablehead & \hd{Semantica (vettori)} & \hd{Parole chiave (BM25)} \\
+\midrule
+\textbf{Punti di forza} & Sinonimi, parafrasi, domande in linguaggio naturale, lingue diverse & Nomi propri, codici, numeri, termini rari, citazioni esatte \\
+\textbf{Debolezze} & Può mancare ``FT-2024-0381'' o un cognome raro & Non capisce che ``auto'' e ``macchina'' sono vicini \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Nessuna delle due basta da sola. La \textbf{ricerca ibrida} le usa entrambe e ne fonde i risultati.
+
+\subsection{BM25 e Reciprocal Rank Fusion}
+
+\begin{description}[style=nextline,leftmargin=1em]
+  \item[BM25] È l'algoritmo classico di ranking per parole chiave. Premia i documenti che contengono i termini cercati, soprattutto se rari (idea di TF-IDF), compensando la lunghezza del documento. SQLite lo offre già dentro FTS5.
+  \item[Reciprocal Rank Fusion (RRF)] Fonde più classifiche in una. Ogni risultato riceve, per ogni lista, il punteggio $\dfrac{1}{k + \text{posizione}}$ con $k$ di solito pari a 60, e i punteggi si sommano. Un risultato che compare in alto in \emph{entrambe} le liste vince. Il vantaggio è che non serve confrontare punteggi di natura diversa (coseno e BM25), ma solo le posizioni.
+\end{description}
+
+\subsection{Ricerca dei vicini: esatta e approssimata}
+
+\begin{itemize}
+  \item \textbf{Esatta (brute force)}: si confronta la domanda con tutti i vettori. Semplice e precisa; per decine o centinaia di migliaia di chunk su un solo computer è ancora accettabile.
+  \item \textbf{Approssimata (ANN)}: indici come HNSW o IVF evitano di guardare tutto, con un piccolo margine di errore. Servono quando i vettori sono milioni.
+\end{itemize}
+Per Esper all'inizio il brute force è sufficiente.
+
+\subsection{Che cos'è davvero il RAG}
+
+RAG significa \textbf{Retrieval-Augmented Generation}, in due fasi:
+\begin{enumerate}
+  \item \textbf{Retrieval}: trova i passaggi rilevanti (è la ricerca semantica di Esper).
+  \item \textbf{Generation}: passa quei passaggi a un LLM insieme alla domanda, e il modello risponde basandosi su di essi, citando le fonti.
+\end{enumerate}
+
+\begin{idea}
+Esper nasce come \emph{solo retrieval}. La parte ``G'' si aggiunge dopo, senza modificare il resto.
+\end{idea}
+
+% =========================== 3 ===========================
+\section{Il flusso di inserimento (ingestion)}
+
+Quando trascini un file nell'app:
+
+\begin{center}
+\begin{tikzpicture}[node distance=3mm,
+  stp/.style={text width=2.55cm,inner sep=3pt,font=\footnotesize}]
+  \node[accent,stp] (a) {1.\ Salvataggio};
+  \node[node,stp,right=of a] (b) {2.\ Estrazione};
+  \node[node,stp,right=of b] (c) {3.\ Chunking};
+  \node[node,stp,right=of c] (d) {4.\ Embedding};
+  \node[cool,stp,right=of d] (e) {5.\ Indicizzazione};
+  \foreach \x/\y in {a/b,b/c,c/d,d/e}{\draw[flow] (\x) -- (\y);}
+\end{tikzpicture}
+\end{center}
+
+\begin{enumerate}
+  \item \textbf{Salvataggio}: si calcola l'hash del contenuto (SHA-256). Se esiste già, il file è un duplicato e non si reinserisce. Altrimenti viene copiato nella cartella dell'app con nome basato sull'hash e si crea una riga nel database con stato \code{in\_coda}.
+  \item \textbf{Estrazione} (dipende dal formato):
+  \begin{itemize}
+    \item \code{txt}, \code{md}: si legge direttamente.
+    \item \code{pdf}: PyMuPDF estrae il testo pagina per pagina. Se una pagina non contiene testo (scansione), la si trasforma in immagine e si passa all'OCR.
+    \item \code{jpg}, \code{png}: OCR per il testo contenuto, più embedding visivo dell'immagine stessa.
+  \end{itemize}
+  \item \textbf{Chunking}: il testo si divide in pezzi rispettando per quanto possibile i confini naturali (titoli, paragrafi). Ogni chunk conserva la pagina o la posizione di origine.
+  \item \textbf{Embedding}: i chunk passano in blocchi (\emph{batch}) al modello, che restituisce un vettore per chunk. È la fase più pesante sulla CPU.
+  \item \textbf{Indicizzazione}: testo, vettori e metadati vengono scritti nel database. Lo stato diventa \code{indicizzato} (o \code{errore}, con il motivo).
+\end{enumerate}
+
+La pipeline gira \textbf{in background}: il salvataggio del file è immediato, l'elaborazione procede in una coda e la UI mostra lo stato.
+
+% =========================== 4 ===========================
+\section{Il flusso di ricerca}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=6mm and 10mm]
+  \node[accent,text width=2.6cm] (q) {Domanda};
+  \node[node,text width=3.4cm,right=14mm of q,yshift=15mm] (v) {Ricerca vettoriale\\[-1pt]\footnotesize (embedding)};
+  \node[node,text width=3.4cm,right=14mm of q] (k) {Ricerca full-text\\[-1pt]\footnotesize BM25};
+  \node[node,text width=3.4cm,right=14mm of q,yshift=-15mm] (t) {Filtro per etichette};
+  \node[cool,text width=1.9cm,right=14mm of k] (r) {Fusione RRF};
+  \node[node,text width=2.0cm,right=8mm of r] (rr) {\footnotesize Reranker\\[-1pt]\scriptsize (opzionale)};
+  \draw[flow] (q.east) -- ++(5mm,0) |- (v.west);
+  \draw[flow] (q) -- (k);
+  \draw[flow] (q.east) -- ++(5mm,0) |- (t.west);
+  \draw[flow] (v.east) -- ++(4mm,0) |- (r.west);
+  \draw[flow] (k) -- (r);
+  \draw[flow] (t.east) -- ++(4mm,0) |- (r.west);
+  \draw[flow] (r) -- (rr);
+\end{tikzpicture}
+\caption{Dalla domanda ai risultati.}
+\end{figure}
+
+\begin{enumerate}
+  \item La domanda viene trasformata in embedding \textbf{con lo stesso modello} usato per i documenti. È fondamentale: vettori di modelli diversi non sono confrontabili.
+  \item Si cercano i chunk più vicini (vettoriale) e quelli con le parole giuste (BM25).
+  \item I filtri per etichetta restringono l'insieme dei candidati.
+  \item RRF fonde le liste.
+  \item Opzionale: un \textbf{reranker} (modello più lento e preciso) rilegge i migliori 20--50 candidati insieme alla domanda e li riordina.
+  \item I chunk vengono raggruppati per documento e mostrati con un frammento di anteprima.
+\end{enumerate}
+
+\begin{nota}[Prefissi dei modelli]
+Alcuni modelli (la famiglia E5, per esempio) vogliono un prefisso diverso per la domanda e per il documento (\code{query:} e \code{passage:}). Va usato il modello con le sue convenzioni, altrimenti la qualità cala.
+\end{nota}
+
+% =========================== 5 ===========================
+\section{Gli strumenti, uno per uno}
+
+\subsection{Python 3.12 e uv}
+\begin{itemize}
+  \item \textbf{Python 3.12}: scelto perché le librerie di machine learning (PyTorch, ONNX Runtime, \dots) hanno pacchetti già pronti per questa versione. La 3.14 del sistema è troppo recente.
+  \item \textbf{uv}: gestore di ambienti e pacchetti. Crea il \code{.venv}, installa da PyPI, scarica versioni di Python e blocca le versioni esatte in \code{uv.lock}, così l'ambiente è riproducibile.
+  \item \textbf{\code{uv run <comando>}}: esegue un comando \emph{dentro} l'ambiente del progetto senza doverlo attivare e, se serve, prima sincronizza le dipendenze.
+\end{itemize}
+
+\subsection{FastAPI (backend)}
+Framework web per Python che espone il backend come \textbf{API HTTP} (per esempio \code{POST /documents}, \code{GET /search?q=\dots}).
+\begin{itemize}
+  \item Usa le \emph{type hint} di Python per validare i dati in ingresso e generare la documentazione interattiva (\code{/docs}).
+  \item Gira sopra \textbf{Uvicorn}, il server in ascolto su \code{localhost}.
+  \item La UI è un normale client HTTP: questo separa nettamente interfaccia e logica, ed è ciò che permette di aggiungere Tauri dopo senza riscrivere nulla.
+\end{itemize}
+
+\subsection{SQLite}
+Database relazionale contenuto \textbf{in un solo file}, senza server da avviare. È in ogni telefono e browser: affidabile e molto testato. Per Esper contiene:
+\begin{itemize}
+  \item la tabella dei documenti e delle etichette;
+  \item il testo dei chunk;
+  \item l'indice full-text (FTS5);
+  \item i vettori (con sqlite-vec).
+\end{itemize}
+Il backup consiste nel copiare un file (insieme alla cartella dei file originali). Va attivata la modalità \textbf{WAL} (\code{PRAGMA journal\_mode=WAL}), che permette letture mentre un'altra connessione scrive: utile perché la pipeline scrive in background mentre la UI legge.
+
+\subsection{FTS5 (ricerca full-text)}
+Modulo di SQLite per la ricerca per parole chiave. Costruisce un \textbf{indice invertito} (per ogni parola, l'elenco dei chunk che la contengono) e offre la funzione di ranking \textbf{BM25}. Si può configurare un \emph{tokenizer} che ignora maiuscole e accenti (\code{unicode61 remove\_diacritics 2}); per l'italiano è comodo anche lo \emph{stemming} (ridurre le parole alla radice).
+
+\subsection{sqlite-vec (vettori in SQLite)}
+Estensione di SQLite che aggiunge un tipo di tabella virtuale per memorizzare vettori e fare ricerche di vicinanza (distanza coseno o L2). Fa \textbf{ricerca esatta (brute force)}, adeguata per un archivio personale. È un progetto giovane (pre-1.0): l'API può cambiare, quindi va fissata la versione.
+
+\textbf{Alternativa}: LanceDB, database vettoriale embedded con indici ANN, più adatto se i vettori crescono molto. Si può passare a esso più avanti: i vettori si possono ricalcolare o esportare.
+
+\subsection{PyMuPDF (PDF)}
+Libreria Python basata su MuPDF. Estrae testo (con posizione e struttura), immagini e metadati dai PDF molto velocemente. Può anche \textbf{renderizzare una pagina come immagine}, utile per le pagine scansionate da mandare all'OCR.
+
+\subsection{Tesseract (OCR)}
+Motore OCR open source: trasforma immagini di testo in testo. Richiede il pacchetto di sistema \code{tesseract} e i dati della lingua (\code{tesseract-langpack-ita} su Fedora). Funziona bene su testo stampato pulito; su manoscritti o foto storte i risultati sono scadenti. Si usa da Python con \code{pytesseract} o \code{ocrmypdf}.
+
+\subsection{Alternative all'OCR}
+Esistono OCR basati su reti neurali (EasyOCR, PaddleOCR, Docling) più robusti ma più pesanti. Per iniziare, Tesseract basta.
+
+\subsection{PyTorch e sentence-transformers}
+\begin{itemize}
+  \item \textbf{PyTorch}: la libreria di calcolo tensoriale su cui girano i modelli. Si installa la versione \textbf{CPU-only} (senza CUDA), molto più leggera.
+  \item \textbf{sentence-transformers}: incapsula il caricamento dei modelli di embedding (da Hugging Face), il tokenizer, il pooling e la normalizzazione. Con poche righe, \code{model.encode(lista\_di\_testi)} restituisce i vettori.
+  \item \textbf{Hugging Face Hub}: sito da cui i modelli si scaricano la prima volta e poi restano in cache locale (\code{\textasciitilde/.cache/huggingface}). Dopo il download Esper funziona \textbf{offline}.
+\end{itemize}
+Sulla CPU conviene elaborare in \textbf{batch}, usare tutti i core (PyTorch lo fa da solo) e limitare la lunghezza massima dei chunk. In alternativa, \textbf{ONNX Runtime} può essere più veloce con modelli esportati e quantizzati (int8), a scapito di una configurazione più complessa.
+
+\subsection{Modelli di embedding di testo}
+
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{@{}L{3.3cm}L{1.9cm}L{2.6cm}X@{}}
+\toprule
+\tablehead \hd{Modello} & \hd{Vettore} & \hd{Dimensione} & \hd{Note} \\
+\midrule
+\textbf{bge-m3} (BAAI) & 1024 & circa 570M parametri ($\sim$2 GB) & Multilingue, contesto fino a 8192 token; produce anche rappresentazioni sparse e multi-vettore. Ottimo, ma il più pesante. \\
+\textbf{multilingual-e5-base / small} & 768 / 384 & 280M / 120M & Più leggero, buono in italiano; richiede i prefissi \code{query:}/\code{passage:}. \\
+\textbf{nomic-embed-text} & 768 & $\sim$137M & Leggero; il supporto per l'italiano è meno forte. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Consiglio: partire con \textbf{bge-m3} e passare a e5-small se la velocità su CPU è insufficiente. Il codice va scritto in modo che il modello sia \textbf{sostituibile da configurazione}.
+
+\begin{nota}[Cambiare modello]
+Cambiare modello significa \textbf{ricalcolare tutti gli embedding}. Per questo nel database si salva il nome del modello usato per ogni vettore. I valori della tabella vanno verificati sulle rispettive pagine Hugging Face prima di fissarli nel codice.
+\end{nota}
+
+\subsection{Modelli per le immagini (CLIP / SigLIP)}
+Modelli \emph{multimodali} con due encoder (uno per le immagini, uno per i testi) addestrati insieme perché una foto e la sua descrizione finiscano vicine nello \textbf{stesso spazio}. Permettono ricerche come ``tramonto sul mare'' su fotografie senza alcun testo. \textbf{SigLIP} (Google) è una variante di CLIP con una funzione di perdita migliore; esistono versioni multilingue.
+
+\begin{nota}[Due spazi vettoriali]
+Lo spazio di CLIP/SigLIP è \textbf{diverso} da quello di bge-m3. Servono due indici separati: in ricerca si interrogano entrambi (la domanda viene codificata con ciascuno dei due modelli) e i risultati si fondono con RRF.
+\end{nota}
+
+\subsection{Reranker (opzionale)}
+Un \textbf{cross-encoder} legge insieme domanda e candidato e produce un punteggio di pertinenza. È molto più accurato degli embedding (che codificano domanda e documento separatamente), ma molto più lento, e per questo si applica solo ai migliori candidati. Esempio: \code{bge-reranker-v2-m3}. Si aggiunge solo se la qualità della ricerca ibrida non basta.
+
+\subsection{Interfaccia: Svelte}
+Framework JavaScript per costruire la UI come componenti, qui con \textbf{Vite} (strumento di sviluppo e build) e TypeScript. È già scritta in versione demo, con dati simulati, in \code{frontend/}. Nulla nel backend dipende da questa scelta: la UI parla con FastAPI secondo il contratto descritto in \code{docs/API\_CONTRACT.md}.
+
+\subsection{Docling / Unstructured (opzionale)}
+Librerie che trasformano documenti complessi (PDF con tabelle, colonne, layout) in testo strutturato. Utili se i PDF hanno impaginazione difficile; per iniziare, PyMuPDF basta.
+
+% =========================== 6 ===========================
+\section{Schema del database}
+
+Bozza, che potrà cambiare:
+
+\begin{lstlisting}[language=SQLe]
+-- Un record per ogni file importato
+documents(
+  id            INTEGER PRIMARY KEY,
+  sha256        TEXT UNIQUE,   -- identifica il contenuto, evita i duplicati
+  original_name TEXT,
+  mime_type     TEXT,
+  size_bytes    INTEGER,
+  stored_path   TEXT,          -- dove sta il file nella cartella dell'app
+  status        TEXT,          -- in_coda | in_elaborazione | indicizzato | errore
+  error         TEXT,
+  created_at    TEXT
+)
+
+tags(id INTEGER PRIMARY KEY, name TEXT UNIQUE)
+document_tags(document_id, tag_id)   -- relazione molti-a-molti
+
+-- Un record per ogni pezzo di testo
+chunks(
+  id          INTEGER PRIMARY KEY,
+  document_id INTEGER,
+  position    INTEGER,         -- ordine nel documento
+  page        INTEGER,         -- per i PDF
+  text        TEXT
+)
+
+chunks_fts   -- tabella virtuale FTS5 sul testo dei chunk (parole chiave)
+chunks_vec   -- tabella virtuale sqlite-vec: un vettore per chunk
+images_vec   -- vettori visivi (SigLIP), una riga per immagine
+
+embedding_models(id, name, dimensions)  -- quale modello ha prodotto i vettori
+\end{lstlisting}
+
+% =========================== 7 ===========================
+\section{Serve addestrare modelli?}
+
+\textbf{No, non per iniziare, e probabilmente mai.} Il progetto usa modelli \emph{pre-addestrati} a cui si danno solo input. Si distinguono tre livelli:
+
+\begin{enumerate}
+  \item \textbf{Uso diretto} (è ciò che faremo): scarico il modello, lo eseguo, ottengo vettori. Nessun addestramento.
+  \item \textbf{Fine-tuning}: riaddestrare leggermente un modello sui propri dati (per esempio coppie ``domanda $\to$ documento corretto'' del proprio archivio) per migliorarlo su un dominio specifico. Si considera solo se, dopo aver misurato, la ricerca fallisce in modo sistematico, e richiede un insieme di esempi etichettati.
+  \item \textbf{Addestramento da zero}: fuori scala (richiede enormi quantità di dati e calcolo). Non ha senso qui.
+\end{enumerate}
+
+\begin{idea}[Cosa conviene fare davvero: valutare]
+Costruire un piccolo insieme di prova (30--50 coppie ``domanda $\to$ documento giusto'') e misurare quanto spesso il documento giusto compare tra i primi risultati (\textbf{recall@k}). Con questo si confrontano modelli e parametri di chunking in modo oggettivo, non a sensazione.
+\end{idea}
+
+% =========================== 8 ===========================
+\section{Interazione con un LLM (RAG)}
+
+Fase successiva. Il flusso:
+\begin{enumerate}
+  \item La ricerca restituisce i migliori chunk per la domanda.
+  \item Si costruisce un prompt: istruzioni, chunk numerati e domanda.
+  \item L'LLM genera una risposta che cita i chunk usati.
+\end{enumerate}
+
+Due modi di far girare l'LLM:
+\begin{description}[style=nextline,leftmargin=1em]
+  \item[API (OpenRouter)] Un unico servizio con molti modelli e un'API compatibile con quella di OpenAI; si paga a consumo e conviene scegliere modelli economici. I chunk lasciano il computer: questa è la scelta che sacrifica la privacy.
+  \item[Locale (Ollama + Gemma)] \textbf{Ollama} scarica ed esegue modelli in locale con un'API semplice. Gemma è una famiglia di modelli compatti di Google. Tutto resta sul computer, ma su CPU un modello piccolo è lento e meno capace.
+\end{description}
+
+Il backend può avere un'interfaccia comune, così da cambiare provider con un parametro di configurazione. Il comportamento giusto è far rispondere \emph{solo} in base ai passaggi forniti e dire ``non lo trovo'' se non ci sono, per limitare le invenzioni (allucinazioni).
+
+% =========================== 9 ===========================
+\section{Il guscio desktop: Tauri}
+
+\textbf{Tauri} è un framework per impacchettare una UI web come applicazione desktop.
+\begin{itemize}
+  \item La UI gira nella \textbf{webview del sistema operativo} (WebKitGTK su Linux), non in un Chromium incluso come in Electron. Il risultato è un'app molto più piccola e leggera.
+  \item Il nucleo nativo è in \textbf{Rust}; per questo progetto è poco più di configurazione.
+  \item Il backend Python viene lanciato come \textbf{sidecar} (programma accessorio avviato e chiuso insieme all'app).
+  \item Produce installer nativi (AppImage, .deb, .rpm).
+  \item Difficoltà principale: \textbf{impacchettare Python con le librerie ML} (PyInstaller o simili) è pesante e delicato. Per questo si rimanda: si sviluppa prima il backend con la UI nel browser, e Tauri arriva a fine percorso.
+\end{itemize}
+
+% =========================== 10 ===========================
+\section{Roadmap}
+
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{@{}>{\bfseries\color{amber}}c X@{}}
+\toprule
+\tablehead \hd{Fase} & \hd{Contenuto} \\
+\midrule
+1 & Backend FastAPI, SQLite, importazione di txt/md/pdf, chunking, embedding con bge-m3, ricerca ibrida, etichette \\
+2 & OCR per PDF scansionati e immagini; embedding visivo con SigLIP; ricerca unificata \\
+3 & Interfaccia web curata (anteprime, filtri, stato dell'elaborazione) --- \emph{prototipo già realizzato con dati simulati} \\
+4 & Pacchetto desktop con Tauri \\
+5 & LLM: risposte con citazioni (OpenRouter e/o Ollama + Gemma) \\
+6 & Audio (Whisper per la trascrizione), eventuale cloud e sincronizzazione \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+% =========================== 11 ===========================
+\section{Glossario}
+
+\begin{description}[style=sameline,leftmargin=0pt,labelwidth=4.3cm,itemsep=0.35em,font=\bfseries\color{amber}]
+  \item[Embedding] Vettore numerico che rappresenta il significato di un testo o di un'immagine.
+  \item[Token] Pezzo di testo (parola o parte di parola) su cui lavora un modello.
+  \item[Transformer] Architettura di rete neurale basata sull'attention; base di LLM ed embedding moderni.
+  \item[Encoder] Parte del transformer che \emph{legge} un testo e lo rappresenta (usata per gli embedding).
+  \item[Pooling] Riduzione dei vettori dei token a un unico vettore per il testo intero.
+  \item[Chunk] Pezzo di documento su cui si calcola un embedding.
+  \item[Similarità del coseno] Misura di vicinanza tra vettori in base all'angolo.
+  \item[Brute force / ANN] Ricerca esatta contro approssimata dei vettori più vicini (HNSW, IVF).
+  \item[BM25] Algoritmo di ranking per parole chiave.
+  \item[FTS5] Modulo di ricerca full-text di SQLite.
+  \item[RRF] Tecnica per fondere più classifiche di risultati.
+  \item[Reranker] Modello (cross-encoder) che riordina i candidati leggendo domanda e testo insieme.
+  \item[RAG] Ricerca di passaggi più generazione di una risposta con un LLM.
+  \item[LLM] Modello linguistico di grandi dimensioni (genera testo).
+  \item[Fine-tuning] Ulteriore addestramento di un modello già addestrato.
+  \item[OCR] Riconoscimento del testo in un'immagine.
+  \item[Sidecar] Programma esterno avviato insieme all'app (in Tauri).
+  \item[Quantizzazione] Ridurre la precisione dei pesi di un modello (per esempio int8) per renderlo più veloce e leggero.
+  \item[recall@k] Percentuale di volte in cui il risultato giusto è tra i primi $k$.
+\end{description}
+
+% =========================== 12 ===========================
+\section{Per approfondire}
+
+Ordine di lettura suggerito, dal più utile al meno urgente:
+\begin{enumerate}
+  \item Documentazione di \textbf{sentence-transformers} (sbert.net): capire \code{encode}, modelli e prefissi.
+  \item Pagina del modello \textbf{BAAI/bge-m3} su Hugging Face (model card).
+  \item Documentazione di \textbf{SQLite FTS5} e del repository \textbf{sqlite-vec}.
+  \item Tutorial ufficiale di \textbf{FastAPI}.
+  \item Articolo originale \emph{Attention Is All You Need} (Transformer), per chi vuole la teoria.
+  \item Articoli di SigLIP e CLIP per la ricerca di immagini.
+  \item Documentazione di \textbf{Tauri v2} (sezione sidecar), quando arriverà la fase~4.
+\end{enumerate}
+
+\end{document}

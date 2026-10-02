@@ -1,0 +1,24 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# Segreti e configurazione locale
+.env
+.env.*
+
+# Dati locali dell'app (database e file importati)
+data/
+
+# Claude Code
+.claude/
+
+# Editor / sistema
+.vscode/
+.idea/
+.DS_Store
+
+# Architettura pdf
+.docs/
