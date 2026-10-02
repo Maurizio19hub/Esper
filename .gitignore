@@ -20,5 +20,13 @@ data/
 .idea/
 .DS_Store
 
-# Architettura pdf
-.docs/
+# LaTeX: file generati
+docs/*.aux
+docs/*.log
+docs/*.toc
+docs/*.out
+docs/*.fls
+docs/*.fdb_latexmk
+docs/*.synctex.gz
+docs/build/
+docs/*.pdf
