@@ -47,5 +47,5 @@ def import_file(conn: sqlite3.Connection, src: Path, files_dir: Path = FILES_DIR
     except Exception:
         dest.unlink(missing_ok=True)
         raise
-    return cur.lastrowid, True
+    return cur.lastrowid, True  
     
