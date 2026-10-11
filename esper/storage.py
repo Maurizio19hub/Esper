@@ -6,6 +6,7 @@ import mimetypes
 import sqlite3
 from esper.config import FILES_DIR
 import shutil
+from esper.tags import delete_unused_tags
 
 CHUNK_SIZE = 1024 * 1024 # 1 MiB
 
@@ -48,4 +49,14 @@ def import_file(conn: sqlite3.Connection, src: Path, files_dir: Path = FILES_DIR
         dest.unlink(missing_ok=True)
         raise
     return cur.lastrowid, True  
-    
+
+def delete_document(conn: sqlite3.Connection, document_id: int, files_dir: Path = FILES_DIR) -> bool:
+    """Delete a document, its tag links and its file; return False if it did not exist."""
+    row = conn.execute("SELECT stored_name FROM documents WHERE id = ?", (document_id,)).fetchone()
+    if row is not None:
+        with conn:
+            conn.execute("DELETE FROM documents WHERE id = ?", (document_id,))
+            delete_unused_tags(conn)
+        (files_dir / row["stored_name"]).unlink(missing_ok=True)
+        return True
+    return False
