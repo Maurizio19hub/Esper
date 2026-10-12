@@ -60,3 +60,8 @@ def delete_document(conn: sqlite3.Connection, document_id: int, files_dir: Path 
         (files_dir / row["stored_name"]).unlink(missing_ok=True)
         return True
     return False
+
+def get_document(conn: sqlite3.Connection, document_id: int) -> sqlite3.Row | None:
+    """"Return the row of a document, or None if it does not exist."""
+    return conn.execute("SELECT * FROM documents WHERE id = ?", (document_id,)).fetchone()
+
