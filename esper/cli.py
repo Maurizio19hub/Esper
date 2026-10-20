@@ -6,8 +6,8 @@ import sqlite3
 
 from esper.config import DB_PATH
 from esper.db import connect, init_schema
-from esper.storage import import_file, get_document
-from esper.tags import get_document_by_tag, get_document_tags
+from esper.storage import import_file, get_document, delete_document
+from esper.tags import get_document_by_tag, get_document_tags, normalize_tag, add_tag, remove_tag
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -20,6 +20,19 @@ def build_parser() -> argparse.ArgumentParser:
 
     list_cmd = commands.add_parser("list", help="list archived documents")
     list_cmd.add_argument("--tag", dest="tags", action="append", default=[], help="only documents with this tag (repeatable)")
+
+    tag_cmd = commands.add_parser("tag", help="add tags to a document")
+    tag_cmd.add_argument("document_id", type=int, help="document number as shown by list")
+    tag_cmd.add_argument("names", nargs="+", help="tags to add")
+
+    untag_cmd = commands.add_parser("untag", help="remove tags from a document")
+    untag_cmd.add_argument("document_id", type=int, help="document number as shown by list")
+    untag_cmd.add_argument("names", nargs="+", help="tags to remove")
+
+    delete_cmd = commands.add_parser("delete", help="delete documents and their files")
+    delete_cmd.add_argument("document_ids", nargs="+", type=int, help="document numbers as shown by list")
+    delete_cmd.add_argument("-y", "--yes", action="store_true", help="do not ask for confirmation")
+
 
     return parser
 
@@ -34,6 +47,15 @@ def main(argv: list[str] | None = None) -> int:
             return cmd_import(conn, args.paths)
         if args.command == "list":
             return cmd_list(conn, args.tags)
+        if args.command == "tag":
+            return cmd_tag(conn, args.document_id, args.names)
+        if args.command == "untag":
+            return cmd_untag(conn, args.document_id, args.names)
+        if args.command == "delete":
+            return cmd_delete(conn, args.document_ids, args.yes)
+    except ValueError as ve:
+        print(f'error: {ve}', file=sys.stderr)
+        return 1
     finally:
         conn.close()
 
@@ -79,3 +101,49 @@ def cmd_list(conn: sqlite3.Connection, tags: list[str]) -> int:
             f"{size:>10} {doc['status']:<10}{tag_text}"
         )
     return 0
+
+def print_tags(conn: sqlite3.Connection, document_id: int) -> None:
+    """Print the current tags of a document."""
+    tags = get_document_tags(conn, document_id)
+    print(f"#{document_id} [{', '.join(tags)}]" if tags else f"#{document_id} no tags")
+
+def cmd_tag(conn: sqlite3.Connection, document_id: int, names: list[str]) -> int:
+    """Add tags to a document and print its tags; return 1 if it does not exist."""
+    if get_document(conn, document_id) is None:
+        print(f"error: no document #{document_id}", file=sys.stderr)
+        return 1
+    names = [normalize_tag(name) for name in names]
+    for name in names:
+        add_tag(conn, document_id, name)
+    print_tags(conn, document_id)
+    return 0
+
+def cmd_untag(conn: sqlite3.Connection, document_id: int, names: list[str]) -> int:
+    """Remove tags from a document and print its tags; return 1 if it does not exist."""
+    if get_document(conn, document_id) is None:
+        print(f"error: no document #{document_id}", file=sys.stderr)
+        return 1
+    names = [normalize_tag(name) for name in names]
+    for name in names:
+        remove_tag(conn, document_id, name)
+    print_tags(conn, document_id)
+    return 0
+
+def cmd_delete(conn: sqlite3.Connection, document_ids: list[int], assume_yes: bool) -> int:
+    """Delete documents after confirmation; return 1 if any of them does not exist."""
+    exit_code = 0
+    for doc_id in document_ids:
+        doc = get_document(conn, doc_id)
+        if doc is None:
+            print(f"error: no document #{doc_id}", file=sys.stderr)
+            exit_code = 1
+            continue
+        if not assume_yes:
+            answer = input(f"delete document #{doc_id} [{doc['original_name']}]? [y/N] ")
+            if answer.strip().lower() != "y":
+                print("skipped")
+                continue
+        delete_document(conn, doc_id)
+        print(f"deleted document #{doc_id} [{doc['original_name']}]")
+    return exit_code
+

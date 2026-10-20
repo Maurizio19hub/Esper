@@ -12,6 +12,9 @@ __pycache__/
 # Dati locali dell'app (database e file importati)
 data/
 
+# Vecchi script di verifica, sostituiti dai test pytest
+scripts/old_scripts/
+
 # Claude Code
 .claude/
 
